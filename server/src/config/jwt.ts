@@ -1,6 +1,12 @@
-import jwt, { SignOptions, Secret } from "jsonwebtoken";
+import jwt, { JwtPayload, SignOptions, Secret } from "jsonwebtoken";
 
-interface TokenPayload {
+export interface TokenPayload {
+  userId: string;
+  role: string;
+  gymId?: string;
+}
+
+export interface VerifiedRefreshToken extends JwtPayload {
   userId: string;
   role: string;
   gymId?: string;
@@ -46,4 +52,8 @@ export const generateRefreshToken = (payload: TokenPayload): string => {
   return jwt.sign(payload, getRefreshSecret(), {
     expiresIn: getRefreshExpiresIn(),
   });
+};
+
+export const verifyRefreshToken = (token: string): VerifiedRefreshToken => {
+  return jwt.verify(token, getRefreshSecret()) as VerifiedRefreshToken;
 };
