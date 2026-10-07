@@ -76,3 +76,24 @@ export const getAdminAccessCheck = (req: Request, res: Response): void => {
     },
   });
 };
+
+export const getGymContextCheck = (req: Request, res: Response): void => {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required",
+    });
+
+    return;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Gym tenant context verified",
+    data: {
+      userId: req.user.userId,
+      role: req.user.role,
+      gymId: req.gymId ?? null,
+    },
+  });
+};
