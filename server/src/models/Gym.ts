@@ -1,4 +1,4 @@
-import { Document, Model, Schema, model } from "mongoose";
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 export interface IGym extends Document {
   name: string;
@@ -12,7 +12,7 @@ export interface IGym extends Document {
   timezone: string;
   currency: string;
   isActive: boolean;
-  ownerId?: Schema.Types.ObjectId;
+  ownerId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -7,6 +7,7 @@ import morgan from "morgan";
 
 import { connectDatabase } from "./config/database.js";
 import authRoutes from "./routes/auth.routes.js";
+import gymRoutes from "./routes/gym.routes.js";
 import userRoutes from "./routes/user.routes.js";
 
 dotenv.config();
@@ -40,6 +41,7 @@ app.get("/api/v1/health", (_req, res) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/gyms", gymRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({
