@@ -8,7 +8,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name: req.body.name,
       email: req.body.email,
       password: req.body.password,
-      role: req.body.role,
     });
 
     res.status(201).json({
