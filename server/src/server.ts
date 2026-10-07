@@ -6,6 +6,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import { connectDatabase } from "./config/database.js";
+import authRoutes from "./routes/auth.routes.js";
 
 dotenv.config();
 
@@ -35,6 +36,8 @@ app.get("/api/v1/health", (_req, res) => {
     message: "FitFlow API is running",
   });
 });
+
+app.use("/api/v1/auth", authRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({
