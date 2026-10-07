@@ -55,3 +55,24 @@ export const getCurrentUser = async (
     });
   }
 };
+
+export const getAdminAccessCheck = (req: Request, res: Response): void => {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required",
+    });
+
+    return;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "RBAC authorization successful",
+    data: {
+      userId: req.user.userId,
+      role: req.user.role,
+      message: "You have administrative access to this resource",
+    },
+  });
+};
