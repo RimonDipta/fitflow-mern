@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-import { createGymWithAdmin } from "../services/gym.service.js";
+import { createGymWithAdmin, getCurrentGym } from "../services/gym.service.js";
 
 export const createGym = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -21,6 +21,41 @@ export const createGym = async (req: Request, res: Response): Promise<void> => {
       error instanceof Error ? error.message : "Unable to create gym";
 
     res.status(400).json({
+      success: false,
+      message,
+    });
+  }
+};
+
+export const getCurrentGymController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.gymId) {
+      res.status(403).json({
+        success: false,
+        message: "Your account is not associated with a gym",
+      });
+
+      return;
+    }
+
+    const gym = await getCurrentGym(req.gymId);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        gym,
+      },
+    });
+  } catch (error) {
+    console.error("Get current gym error:", error);
+
+    const message =
+      error instanceof Error ? error.message : "Unable to get current gym";
+
+    res.status(404).json({
       success: false,
       message,
     });

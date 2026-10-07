@@ -34,6 +34,24 @@ interface CreateGymResult {
   admin: CreatedGymAdmin;
 }
 
+export interface CurrentGym {
+  id: string;
+  name: string;
+  slug: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  logo?: string;
+  timezone: string;
+  currency: string;
+  isActive: boolean;
+  ownerId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export const createGymWithAdmin = async (
   input: CreateGymInput,
 ): Promise<CreateGymResult> => {
@@ -60,13 +78,6 @@ export const createGymWithAdmin = async (
       async (): Promise<CreateGymResult> => {
         const passwordHash = await bcrypt.hash(input.admin.password, 12);
 
-        /*
-         * Create the Gym as a normal Mongoose document
-         * and explicitly save it using the transaction session.
-         *
-         * This avoids the create([...], { session }) overload
-         * issue with the current Mongoose TypeScript types.
-         */
         const gym = new Gym({
           name: input.gym.name,
           slug: input.gym.slug,
@@ -82,10 +93,6 @@ export const createGymWithAdmin = async (
 
         await gym.save({ session });
 
-        /*
-         * Create the first GYM_ADMIN and connect it
-         * to the newly created Gym.
-         */
         const admin = new User({
           name: input.admin.name,
           email: input.admin.email,
@@ -98,10 +105,6 @@ export const createGymWithAdmin = async (
 
         await admin.save({ session });
 
-        /*
-         * The newly created admin becomes the owner
-         * of the Gym.
-         */
         gym.ownerId = admin._id;
 
         await gym.save({ session });
@@ -138,4 +141,34 @@ export const createGymWithAdmin = async (
   } finally {
     await session.endSession();
   }
+};
+
+export const getCurrentGym = async (gymId: string): Promise<CurrentGym> => {
+  const gym = await Gym.findById(gymId);
+
+  if (!gym) {
+    throw new Error("Gym not found");
+  }
+
+  if (!gym.isActive) {
+    throw new Error("This gym is currently inactive");
+  }
+
+  return {
+    id: gym._id.toString(),
+    name: gym.name,
+    slug: gym.slug,
+    email: gym.email,
+    phone: gym.phone,
+    address: gym.address,
+    city: gym.city,
+    country: gym.country,
+    logo: gym.logo,
+    timezone: gym.timezone,
+    currency: gym.currency,
+    isActive: gym.isActive,
+    ownerId: gym.ownerId?.toString(),
+    createdAt: gym.createdAt,
+    updatedAt: gym.updatedAt,
+  };
 };
