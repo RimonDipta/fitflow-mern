@@ -16,6 +16,7 @@ import { UserRole } from "../models/User.js";
 import {
   createMemberSchema,
   updateMemberSchema,
+  updateMemberStatusSchema,
 } from "../validators/member.validator.js";
 
 const router = Router();
@@ -54,6 +55,7 @@ router.patch(
 router.patch(
   "/:memberId/status",
   authorize(...memberManagementRoles),
+  validate(updateMemberStatusSchema),
   updateMemberStatusController,
 );
 

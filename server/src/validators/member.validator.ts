@@ -20,12 +20,7 @@ export const createMemberSchema = z.object({
 
   phone: optionalString(20),
 
-  dateOfBirth: z
-    .string()
-    .datetime({
-      offset: true,
-    })
-    .optional(),
+  dateOfBirth: z.string().datetime({ offset: true }).optional(),
 
   gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional(),
 
@@ -45,18 +40,19 @@ export const createMemberSchema = z.object({
 
   weight: z.number().positive().max(500).optional(),
 
-  joinedAt: z
-    .string()
-    .datetime({
-      offset: true,
-    })
-    .optional(),
+  joinedAt: z.string().datetime({ offset: true }).optional(),
 
   notes: optionalString(2000),
 });
 
 export const updateMemberSchema = createMemberSchema.partial();
 
+export const updateMemberStatusSchema = z.object({
+  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]),
+});
+
 export type CreateMemberInput = z.infer<typeof createMemberSchema>;
 
 export type UpdateMemberInput = z.infer<typeof updateMemberSchema>;
+
+export type UpdateMemberStatusInput = z.infer<typeof updateMemberStatusSchema>;
