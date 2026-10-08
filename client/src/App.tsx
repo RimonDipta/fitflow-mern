@@ -9,6 +9,7 @@ import RegisterPage from "./features/auth/pages/RegisterPage";
 
 import MembersPage from "./features/members/pages/MembersPage";
 import MemberProfilePage from "./features/members/pages/MemberProfilePage";
+import { MembershipPlansPage } from "./features/membership-plans/pages/MembershipPlansPage";
 
 import TrainersPage from "./features/trainers/pages/TrainersPage";
 import AttendancePage from "./features/attendance/pages/AttendancePage";
@@ -49,6 +50,8 @@ const App = () => {
           <Route path="/reports" element={<ReportsPage />} />
 
           <Route path="/settings" element={<SettingsPage />} />
+
+          <Route path="/membership-plans" element={<MembershipPlansPage />} />
         </Route>
       </Route>
 

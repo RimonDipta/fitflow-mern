@@ -44,6 +44,12 @@ const navigationItems: NavigationItem[] = [
     roles: ["SUPER_ADMIN", "GYM_ADMIN", "STAFF"],
   },
   {
+    label: "Membership Plans",
+    path: "/membership-plans",
+    icon: CreditCard,
+    roles: ["SUPER_ADMIN", "GYM_ADMIN", "STAFF"],
+  },
+  {
     label: "Trainers",
     path: "/trainers",
     icon: UserRoundCog,
