@@ -2,13 +2,18 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Ellipsis,
   LoaderCircle,
   Plus,
   Search,
   Users,
 } from "lucide-react";
 
-import { getMembers } from "../api/member.api";
+import {
+  deleteMember,
+  getMembers,
+  updateMemberStatus,
+} from "../api/member.api";
 import MemberFormModal from "../components/MemberFormModal";
 import type { Member, MemberStatus } from "../types/member.types";
 
@@ -27,9 +32,17 @@ const MembersPage = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const loadMembers = useCallback(async (): Promise<void> => {
     try {
@@ -73,11 +86,81 @@ const MembersPage = () => {
     setPage(1);
   };
 
-  const handleMemberCreated = (): void => {
+  const handleMemberSaved = (): void => {
     setPage(1);
     setActiveSearch("");
     setSearch("");
-    void loadMembers();
+    setShowCreateModal(false);
+    setEditingMember(null);
+  };
+
+  const handleStatusChange = async (
+    member: Member,
+    status: MemberStatus,
+  ): Promise<void> => {
+    if (member.status === status) {
+      setOpenMenuId(null);
+      return;
+    }
+
+    try {
+      setActionLoadingId(member.id);
+      setOpenMenuId(null);
+
+      const updatedMember = await updateMemberStatus(member.id, { status });
+
+      setMembers((currentMembers) =>
+        currentMembers.map((currentMember) =>
+          currentMember.id === updatedMember.id ? updatedMember : currentMember,
+        ),
+      );
+    } catch (requestError) {
+      console.error("Failed to update member status:", requestError);
+
+      window.alert(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to update member status.",
+      );
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleDeleteMember = async (member: Member): Promise<void> => {
+    const confirmed = window.confirm(
+      `Delete ${member.name}?\n\nThis action cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      setOpenMenuId(null);
+      return;
+    }
+
+    try {
+      setActionLoadingId(member.id);
+      setOpenMenuId(null);
+
+      await deleteMember(member.id);
+
+      setMembers((currentMembers) =>
+        currentMembers.filter(
+          (currentMember) => currentMember.id !== member.id,
+        ),
+      );
+
+      setTotal((currentTotal) => Math.max(0, currentTotal - 1));
+    } catch (requestError) {
+      console.error("Failed to delete member:", requestError);
+
+      window.alert(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to delete member.",
+      );
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   const formatDate = (date: string): string => {
@@ -89,7 +172,7 @@ const MembersPage = () => {
   };
 
   return (
-    <section className="members-page">
+    <section className="members-page" onClick={() => setOpenMenuId(null)}>
       <div className="page-header">
         <div>
           <p className="page-eyebrow">Member management</p>
@@ -110,7 +193,10 @@ const MembersPage = () => {
           <button
             type="button"
             className="member-primary-button members-add-button"
-            onClick={() => setShowCreateModal(true)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowCreateModal(true);
+            }}
           >
             <Plus size={17} strokeWidth={2} />
             Add member
@@ -187,7 +273,10 @@ const MembersPage = () => {
               <button
                 type="button"
                 className="member-primary-button"
-                onClick={() => setShowCreateModal(true)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowCreateModal(true);
+                }}
               >
                 <Plus size={16} />
                 Add your first member
@@ -205,55 +294,164 @@ const MembersPage = () => {
                     <th>Member Code</th>
                     <th>Status</th>
                     <th>Joined</th>
+                    <th />
                   </tr>
                 </thead>
 
                 <tbody>
-                  {members.map((member) => (
-                    <tr key={member.id}>
-                      <td>
-                        <div className="member-name-cell">
-                          <div className="member-avatar">
-                            {member.name.charAt(0).toUpperCase()}
+                  {members.map((member) => {
+                    const isActionLoading = actionLoadingId === member.id;
+
+                    return (
+                      <tr key={member.id}>
+                        <td>
+                          <div className="member-name-cell">
+                            <div className="member-avatar">
+                              {member.name.charAt(0).toUpperCase()}
+                            </div>
+
+                            <div>
+                              <strong>{member.name}</strong>
+
+                              <span>
+                                {member.gender
+                                  ? member.gender.replaceAll("_", " ")
+                                  : "Gender not provided"}
+                              </span>
+                            </div>
                           </div>
+                        </td>
 
-                          <div>
-                            <strong>{member.name}</strong>
+                        <td>
+                          <div className="member-contact-cell">
+                            <span>{member.email || "No email"}</span>
 
-                            <span>
-                              {member.gender
-                                ? member.gender.replaceAll("_", " ")
-                                : "Gender not provided"}
-                            </span>
+                            <span>{member.phone || "No phone"}</span>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td>
-                        <div className="member-contact-cell">
-                          <span>{member.email || "No email"}</span>
+                        <td>
+                          <span className="member-code">
+                            {member.memberCode}
+                          </span>
+                        </td>
 
-                          <span>{member.phone || "No phone"}</span>
-                        </div>
-                      </td>
+                        <td>
+                          <span className={statusClassName[member.status]}>
+                            {member.status}
+                          </span>
+                        </td>
 
-                      <td>
-                        <span className="member-code">{member.memberCode}</span>
-                      </td>
+                        <td>
+                          <span className="member-date">
+                            {formatDate(member.joinedAt)}
+                          </span>
+                        </td>
 
-                      <td>
-                        <span className={statusClassName[member.status]}>
-                          {member.status}
-                        </span>
-                      </td>
+                        <td>
+                          <div className="member-actions">
+                            {isActionLoading ? (
+                              <LoaderCircle
+                                size={18}
+                                className="loading-spinner"
+                                strokeWidth={1.8}
+                              />
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className="member-action-button"
+                                  aria-label={`Actions for ${member.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
 
-                      <td>
-                        <span className="member-date">
-                          {formatDate(member.joinedAt)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                                    setOpenMenuId((currentId) =>
+                                      currentId === member.id
+                                        ? null
+                                        : member.id,
+                                    );
+                                  }}
+                                >
+                                  <Ellipsis size={18} />
+                                </button>
+
+                                {openMenuId === member.id && (
+                                  <div
+                                    className="member-action-menu"
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingMember(member);
+                                        setOpenMenuId(null);
+                                      }}
+                                    >
+                                      Edit member
+                                    </button>
+
+                                    {member.status !== "ACTIVE" && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void handleStatusChange(
+                                            member,
+                                            "ACTIVE",
+                                          )
+                                        }
+                                      >
+                                        Activate
+                                      </button>
+                                    )}
+
+                                    {member.status !== "INACTIVE" && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void handleStatusChange(
+                                            member,
+                                            "INACTIVE",
+                                          )
+                                        }
+                                      >
+                                        Mark inactive
+                                      </button>
+                                    )}
+
+                                    {member.status !== "SUSPENDED" && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void handleStatusChange(
+                                            member,
+                                            "SUSPENDED",
+                                          )
+                                        }
+                                      >
+                                        Suspend
+                                      </button>
+                                    )}
+
+                                    <div className="member-action-menu-divider" />
+
+                                    <button
+                                      type="button"
+                                      className="member-action-danger"
+                                      onClick={() =>
+                                        void handleDeleteMember(member)
+                                      }
+                                    >
+                                      Delete member
+                                    </button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -293,10 +491,14 @@ const MembersPage = () => {
         )}
       </div>
 
-      {showCreateModal && (
+      {(showCreateModal || editingMember) && (
         <MemberFormModal
-          onClose={() => setShowCreateModal(false)}
-          onCreated={handleMemberCreated}
+          member={editingMember ?? undefined}
+          onClose={() => {
+            setShowCreateModal(false);
+            setEditingMember(null);
+          }}
+          onSaved={handleMemberSaved}
         />
       )}
     </section>

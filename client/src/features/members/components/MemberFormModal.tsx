@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
 
-import { createMember } from "../api/member.api";
-import type { CreateMemberPayload, MemberGender } from "../types/member.types";
+import { createMember, updateMember } from "../api/member.api";
+import type {
+  CreateMemberPayload,
+  Member,
+  MemberGender,
+} from "../types/member.types";
 
 interface MemberFormModalProps {
+  member?: Member;
   onClose: () => void;
-  onCreated: () => void;
+  onSaved: () => void;
 }
 
-const MemberFormModal = ({ onClose, onCreated }: MemberFormModalProps) => {
+const MemberFormModal = ({
+  member,
+  onClose,
+  onSaved,
+}: MemberFormModalProps) => {
+  const isEditing = Boolean(member);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -28,6 +39,31 @@ const MemberFormModal = ({ onClose, onCreated }: MemberFormModalProps) => {
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!member) {
+      return;
+    }
+
+    setName(member.name);
+    setEmail(member.email ?? "");
+    setPhone(member.phone ?? "");
+    setGender(member.gender ?? "");
+
+    setDateOfBirth(member.dateOfBirth ? member.dateOfBirth.slice(0, 10) : "");
+
+    setHeight(member.height !== undefined ? String(member.height) : "");
+
+    setWeight(member.weight !== undefined ? String(member.weight) : "");
+
+    setCity(member.city ?? "");
+    setCountry(member.country ?? "Bangladesh");
+    setAddress(member.address ?? "");
+    setEmergencyContactName(member.emergencyContactName ?? "");
+    setEmergencyContactPhone(member.emergencyContactPhone ?? "");
+    setEmergencyContactRelation(member.emergencyContactRelation ?? "");
+    setNotes(member.notes ?? "");
+  }, [member]);
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>,
@@ -86,17 +122,24 @@ const MemberFormModal = ({ onClose, onCreated }: MemberFormModalProps) => {
         ...(notes.trim() ? { notes: notes.trim() } : {}),
       };
 
-      await createMember(payload);
+      if (member) {
+        await updateMember(member.id, payload);
+      } else {
+        await createMember(payload);
+      }
 
-      onCreated();
+      onSaved();
       onClose();
     } catch (requestError) {
-      console.error("Failed to create member:", requestError);
+      console.error(
+        `Failed to ${isEditing ? "update" : "create"} member:`,
+        requestError,
+      );
 
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Unable to create member.",
+          : `Unable to ${isEditing ? "update" : "create"} member.`,
       );
     } finally {
       setSubmitting(false);
@@ -117,12 +160,15 @@ const MemberFormModal = ({ onClose, onCreated }: MemberFormModalProps) => {
         className="member-modal"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="create-member-title"
+        aria-labelledby="member-form-title"
       >
         <div className="member-modal-header">
           <div>
             <p className="page-eyebrow">Member management</p>
-            <h2 id="create-member-title">Add member</h2>
+
+            <h2 id="member-form-title">
+              {isEditing ? "Edit member" : "Add member"}
+            </h2>
           </div>
 
           <button
@@ -354,7 +400,13 @@ const MemberFormModal = ({ onClose, onCreated }: MemberFormModalProps) => {
               className="member-primary-button"
               disabled={submitting}
             >
-              {submitting ? "Creating..." : "Create member"}
+              {submitting
+                ? isEditing
+                  ? "Saving..."
+                  : "Creating..."
+                : isEditing
+                  ? "Save changes"
+                  : "Create member"}
             </button>
           </div>
         </form>
