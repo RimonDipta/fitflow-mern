@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
+import {
+  Activity,
+  ArrowUpRight,
+  CalendarDays,
+  CreditCard,
+  Users,
+} from "lucide-react";
 
-import { getCurrentGym } from "../../gym/api/gym.api";
 import { useAuth } from "../../auth/context/AuthContext";
+import { getCurrentGym } from "../../gym/api/gym.api";
 import type { Gym } from "../../gym/api/gym.api";
 
 const DashboardPage = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [gym, setGym] = useState<Gym | null>(null);
 
@@ -32,69 +39,142 @@ const DashboardPage = () => {
     void loadGym();
   }, []);
 
-  const handleLogout = async (): Promise<void> => {
-    await logout();
-  };
-
   return (
-    <main className="dashboard-page">
-      <header className="dashboard-header">
+    <div className="dashboard-workspace">
+      <section className="dashboard-intro">
         <div>
-          <span className="dashboard-eyebrow">FITFLOW</span>
+          <span className="dashboard-eyebrow">OVERVIEW</span>
 
-          <h1>Dashboard</h1>
+          <h1>Good morning, {user?.name?.split(" ")[0]}.</h1>
+
+          <p>Here is what's happening with your fitness business today.</p>
         </div>
 
-        <div className="dashboard-user">
-          <div>
-            <strong>{user?.name}</strong>
+        <div className="dashboard-date">
+          <CalendarDays size={17} strokeWidth={1.8} />
 
-            <span>{user?.role}</span>
+          <span>
+            {new Intl.DateTimeFormat("en-US", {
+              weekday: "long",
+              month: "short",
+              day: "numeric",
+            }).format(new Date())}
+          </span>
+        </div>
+      </section>
+
+      <section className="dashboard-stats">
+        <article className="stat-card">
+          <div className="stat-card-top">
+            <span>Total Members</span>
+
+            <div className="stat-icon">
+              <Users size={18} strokeWidth={1.8} />
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              void handleLogout();
-            }}
-          >
-            Logout
-          </button>
-        </div>
-      </header>
+          <strong>—</strong>
 
-      <section className="dashboard-content">
-        <div className="dashboard-card">
-          <span className="card-label">Current gym</span>
+          <span className="stat-card-meta">Member analytics coming soon</span>
+        </article>
 
-          {isLoadingGym && <p>Loading gym...</p>}
+        <article className="stat-card">
+          <div className="stat-card-top">
+            <span>Attendance Today</span>
+
+            <div className="stat-icon">
+              <Activity size={18} strokeWidth={1.8} />
+            </div>
+          </div>
+
+          <strong>—</strong>
+
+          <span className="stat-card-meta">
+            Attendance tracking coming soon
+          </span>
+        </article>
+
+        <article className="stat-card">
+          <div className="stat-card-top">
+            <span>Monthly Revenue</span>
+
+            <div className="stat-icon">
+              <CreditCard size={18} strokeWidth={1.8} />
+            </div>
+          </div>
+
+          <strong>—</strong>
+
+          <span className="stat-card-meta">Payment analytics coming soon</span>
+        </article>
+      </section>
+
+      <section className="dashboard-grid">
+        <article className="dashboard-panel dashboard-panel-large">
+          <div className="dashboard-panel-header">
+            <div>
+              <span className="panel-label">GYM</span>
+
+              <h2>Current gym</h2>
+            </div>
+
+            <ArrowUpRight size={19} strokeWidth={1.8} />
+          </div>
+
+          {isLoadingGym && (
+            <div className="dashboard-loading">Loading gym information...</div>
+          )}
 
           {!isLoadingGym && gymError && (
             <p className="auth-error">{gymError}</p>
           )}
 
           {!isLoadingGym && !gymError && gym && (
-            <>
-              <h2>{gym.name}</h2>
+            <div className="gym-overview">
+              <div className="gym-avatar">
+                {gym.name.charAt(0).toUpperCase()}
+              </div>
 
-              <p>
-                {gym.city}, {gym.country}
-              </p>
+              <div>
+                <h3>{gym.name}</h3>
 
-              <span className="gym-slug">/{gym.slug}</span>
-            </>
+                <p>
+                  {gym.city && gym.country
+                    ? `${gym.city}, ${gym.country}`
+                    : "Location not configured"}
+                </p>
+
+                <span>/{gym.slug}</span>
+              </div>
+            </div>
           )}
-        </div>
+        </article>
 
-        <div className="dashboard-card">
-          <span className="card-label">Account</span>
+        <article className="dashboard-panel">
+          <div className="dashboard-panel-header">
+            <div>
+              <span className="panel-label">ACCOUNT</span>
 
-          <h2>{user?.email}</h2>
+              <h2>Your profile</h2>
+            </div>
+          </div>
 
-          <p>Your authenticated FitFlow session is active.</p>
-        </div>
+          <div className="account-overview">
+            <div className="account-avatar">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+
+            <div>
+              <strong>{user?.name}</strong>
+
+              <span>{user?.email}</span>
+
+              <small>{user?.role}</small>
+            </div>
+          </div>
+        </article>
       </section>
-    </main>
+    </div>
   );
 };
 

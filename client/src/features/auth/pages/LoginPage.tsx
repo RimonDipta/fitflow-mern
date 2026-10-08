@@ -1,11 +1,12 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 
 interface LoginLocationState {
   from?: string;
+  registered?: boolean;
 }
 
 const LoginPage = () => {
@@ -14,6 +15,7 @@ const LoginPage = () => {
   const location = useLocation();
 
   const state = location.state as LoginLocationState | null;
+
   const destination = state?.from || "/dashboard";
 
   const [email, setEmail] = useState("");
@@ -34,8 +36,14 @@ const LoginPage = () => {
     setIsSubmitting(true);
 
     try {
-      await login({ email, password });
-      navigate(destination, { replace: true });
+      await login({
+        email,
+        password,
+      });
+
+      navigate(destination, {
+        replace: true,
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to login";
@@ -50,12 +58,18 @@ const LoginPage = () => {
     <main className="auth-page">
       <section className="auth-card">
         <div className="auth-header">
-          <span className="auth-brand">FitFlow</span>
+          <span className="auth-brand">FITFLOW</span>
 
           <h1>Welcome back</h1>
 
           <p>Sign in to manage your fitness business.</p>
         </div>
+
+        {state?.registered && (
+          <p className="auth-success">
+            Account created successfully. You can now sign in.
+          </p>
+        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label htmlFor="email">Email</label>
@@ -88,6 +102,12 @@ const LoginPage = () => {
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <div className="auth-footer">
+          <span>Don't have an account?</span>
+
+          <Link to="/register">Create account</Link>
+        </div>
       </section>
     </main>
   );

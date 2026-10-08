@@ -28,7 +28,6 @@ const refreshSessionSchema = new Schema<IRefreshSession>(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
     },
 
     revokedAt: {
@@ -41,12 +40,12 @@ const refreshSessionSchema = new Schema<IRefreshSession>(
   },
 );
 
-/*
- * MongoDB automatically removes expired refresh sessions.
- *
- * The session remains usable until expiresAt, unless revoked.
- */
-refreshSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+refreshSessionSchema.index(
+  { expiresAt: 1 },
+  {
+    expireAfterSeconds: 0,
+  },
+);
 
 export const RefreshSession: Model<IRefreshSession> = model<IRefreshSession>(
   "RefreshSession",

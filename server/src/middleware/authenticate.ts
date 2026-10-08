@@ -1,9 +1,10 @@
 import { NextFunction, Request, Response } from "express";
-import jwt, { JwtPayload, TokenExpiredError } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
-import { User, UserRole } from "../models/User.js";
+import { User } from "../models/User.js";
+import { UserRole } from "../models/User.js";
 
-interface AccessTokenPayload extends JwtPayload {
+interface AccessTokenPayload extends jwt.JwtPayload {
   userId: string;
   role: UserRole;
   gymId?: string;
@@ -32,7 +33,6 @@ export const authenticate = async (
         success: false,
         message: "Authentication required",
       });
-
       return;
     }
 
@@ -41,7 +41,6 @@ export const authenticate = async (
         success: false,
         message: "Invalid authorization format",
       });
-
       return;
     }
 
@@ -52,7 +51,6 @@ export const authenticate = async (
         success: false,
         message: "Access token is required",
       });
-
       return;
     }
 
@@ -66,7 +64,6 @@ export const authenticate = async (
         success: false,
         message: "Invalid access token",
       });
-
       return;
     }
 
@@ -77,7 +74,6 @@ export const authenticate = async (
         success: false,
         message: "User account no longer exists",
       });
-
       return;
     }
 
@@ -86,7 +82,6 @@ export const authenticate = async (
         success: false,
         message: "Your account has been deactivated",
       });
-
       return;
     }
 
@@ -98,12 +93,11 @@ export const authenticate = async (
 
     next();
   } catch (error) {
-    if (error instanceof TokenExpiredError) {
+    if (error instanceof jwt.TokenExpiredError) {
       res.status(401).json({
         success: false,
         message: "Access token has expired",
       });
-
       return;
     }
 

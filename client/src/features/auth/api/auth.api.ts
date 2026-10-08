@@ -1,10 +1,35 @@
 import { api } from "../../../lib/api";
 import type { AuthResponse, LoginCredentials, User } from "../types/auth.types";
 
+interface RegisterCredentials {
+  name: string;
+  email: string;
+  password: string;
+}
+
+interface RegisterResponse {
+  success: boolean;
+  message: string;
+  data: {
+    user: User;
+  };
+}
+
 interface LogoutResponse {
   success: boolean;
   message: string;
 }
+
+export const registerUser = async (
+  credentials: RegisterCredentials,
+): Promise<User> => {
+  const response = await api.post<RegisterResponse>(
+    "/auth/register",
+    credentials,
+  );
+
+  return response.data.data.user;
+};
 
 export const loginUser = async (
   credentials: LoginCredentials,
