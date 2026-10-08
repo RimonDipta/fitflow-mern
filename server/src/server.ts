@@ -6,9 +6,12 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import { connectDatabase } from "./config/database.js";
+
 import authRoutes from "./routes/auth.routes.js";
 import gymRoutes from "./routes/gym.routes.js";
 import memberRoutes from "./routes/member.routes.js";
+import membershipPlanRoutes from "./routes/membershipPlan.routes.js";
+import membershipRoutes from "./routes/membership.routes.js";
 import userRoutes from "./routes/user.routes.js";
 
 dotenv.config();
@@ -27,7 +30,6 @@ app.use(
 );
 
 app.use(helmet());
-
 app.use(morgan("dev"));
 
 app.use(
@@ -59,6 +61,10 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/gyms", gymRoutes);
 
 app.use("/api/v1/members", memberRoutes);
+
+app.use("/api/v1/membership-plans", membershipPlanRoutes);
+
+app.use("/api/v1/memberships", membershipRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({
