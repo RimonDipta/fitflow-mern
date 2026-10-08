@@ -8,6 +8,7 @@ import {
   Search,
   Users,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import {
   deleteMember,
@@ -311,7 +312,13 @@ const MembersPage = () => {
                             </div>
 
                             <div>
-                              <strong>{member.name}</strong>
+                              <Link
+                                to={`/members/${member.id}`}
+                                className="member-name-link"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {member.name}
+                              </Link>
 
                               <span>
                                 {member.gender
