@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import "./App.css";
+
 import AppLayout from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 
@@ -9,7 +11,9 @@ import RegisterPage from "./features/auth/pages/RegisterPage";
 
 import MembersPage from "./features/members/pages/MembersPage";
 import MemberProfilePage from "./features/members/pages/MemberProfilePage";
+
 import { MembershipPlansPage } from "./features/membership-plans/pages/MembershipPlansPage";
+import MembershipsPage from "./features/memberships/pages/MembershipsPage";
 
 import TrainersPage from "./features/trainers/pages/TrainersPage";
 import AttendancePage from "./features/attendance/pages/AttendancePage";
@@ -35,6 +39,10 @@ const App = () => {
 
           <Route path="/members/:memberId" element={<MemberProfilePage />} />
 
+          <Route path="/membership-plans" element={<MembershipPlansPage />} />
+
+          <Route path="/memberships" element={<MembershipsPage />} />
+
           <Route path="/trainers" element={<TrainersPage />} />
 
           <Route path="/attendance" element={<AttendancePage />} />
@@ -50,8 +58,6 @@ const App = () => {
           <Route path="/reports" element={<ReportsPage />} />
 
           <Route path="/settings" element={<SettingsPage />} />
-
-          <Route path="/membership-plans" element={<MembershipPlansPage />} />
         </Route>
       </Route>
 
