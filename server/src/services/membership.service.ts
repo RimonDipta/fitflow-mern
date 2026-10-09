@@ -23,19 +23,16 @@ interface MembershipResult {
   gymId: string;
   memberId: string;
   membershipPlanId: string;
-
   member: {
     id: string;
     name: string;
     memberCode: string;
   };
-
   plan: {
     id: string;
     name: string;
     durationDays: number;
   };
-
   startDate: Date;
   endDate: Date;
   price: number;
@@ -57,12 +54,29 @@ const validateObjectId = (value: string, message: string): void => {
   }
 };
 
+const getStartOfUtcDay = (date: Date = new Date()): Date =>
+  new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+
+const getEndOfUtcDay = (date: Date): Date =>
+  new Date(getStartOfUtcDay(date).getTime() + 86_400_000 - 1);
+
 const calculateEndDate = (startDate: Date, durationDays: number): Date => {
-  const endDate = new Date(startDate);
+  const endDate = getStartOfUtcDay(startDate);
+  endDate.setUTCDate(endDate.getUTCDate() + durationDays - 1);
+  return getEndOfUtcDay(endDate);
+};
 
-  endDate.setDate(endDate.getDate() + durationDays - 1);
-
-  return endDate;
+const expireMembershipsForGym = async (gymId: string): Promise<void> => {
+  await Membership.updateMany(
+    {
+      gymId,
+      status: MembershipStatus.ACTIVE,
+      endDate: { $lt: getStartOfUtcDay() },
+    },
+    { $set: { status: MembershipStatus.EXPIRED } },
+  );
 };
 
 const toMembershipResult = (
@@ -95,19 +109,16 @@ const toMembershipResult = (
   gymId: membership.gymId.toString(),
   memberId: membership.memberId.toString(),
   membershipPlanId: membership.membershipPlanId.toString(),
-
   member: {
     id: member._id.toString(),
     name: member.name,
     memberCode: member.memberCode,
   },
-
   plan: {
     id: plan._id.toString(),
     name: plan.name,
     durationDays: plan.durationDays,
   },
-
   startDate: membership.startDate,
   endDate: membership.endDate,
   price: membership.price,
@@ -149,11 +160,7 @@ const findMembershipWithRelations = async (
     throw new Error("Membership plan could not be found");
   }
 
-  return {
-    membership,
-    member,
-    plan,
-  };
+  return { membership, member, plan };
 };
 
 export const createMembership = async (
@@ -161,10 +168,10 @@ export const createMembership = async (
   input: CreateMembershipInput,
 ): Promise<MembershipResult> => {
   validateObjectId(gymId, "Invalid gym ID");
-
   validateObjectId(input.memberId, "Invalid member ID");
-
   validateObjectId(input.membershipPlanId, "Invalid membership plan ID");
+
+  await expireMembershipsForGym(gymId);
 
   const member = await Member.findOne({
     _id: input.memberId,
@@ -187,15 +194,24 @@ export const createMembership = async (
 
   const startDate = new Date(input.startDate);
 
-  const endDate = calculateEndDate(startDate, plan.durationDays);
+  if (Number.isNaN(startDate.getTime())) {
+    throw new Error("Invalid membership start date");
+  }
+
+  const normalizedStartDate = getStartOfUtcDay(startDate);
+
+  if (normalizedStartDate < getStartOfUtcDay()) {
+    throw new Error("Membership start date cannot be in the past");
+  }
+
+  const endDate = calculateEndDate(normalizedStartDate, plan.durationDays);
 
   const existingActiveMembership = await Membership.findOne({
     gymId,
     memberId: member._id,
     status: MembershipStatus.ACTIVE,
-    endDate: {
-      $gte: startDate,
-    },
+    startDate: { $lte: endDate },
+    endDate: { $gte: normalizedStartDate },
   });
 
   if (existingActiveMembership) {
@@ -212,7 +228,7 @@ export const createMembership = async (
     gymId,
     memberId: member._id,
     membershipPlanId: plan._id,
-    startDate,
+    startDate: normalizedStartDate,
     endDate,
     price: plan.price,
     paymentStatus,
@@ -233,12 +249,9 @@ export const listMemberships = async (
     validateObjectId(memberId, "Invalid member ID");
   }
 
-  const filter: {
-    gymId: string;
-    memberId?: string;
-  } = {
-    gymId,
-  };
+  await expireMembershipsForGym(gymId);
+
+  const filter: { gymId: string; memberId?: string } = { gymId };
 
   if (memberId) {
     filter.memberId = memberId;
@@ -269,10 +282,7 @@ export const listMemberships = async (
     results.push(toMembershipResult(membership, member, plan));
   }
 
-  return {
-    memberships: results,
-    total: results.length,
-  };
+  return { memberships: results, total: results.length };
 };
 
 export const getMembershipById = async (
@@ -280,8 +290,9 @@ export const getMembershipById = async (
   membershipId: string,
 ): Promise<MembershipResult> => {
   validateObjectId(gymId, "Invalid gym ID");
-
   validateObjectId(membershipId, "Invalid membership ID");
+
+  await expireMembershipsForGym(gymId);
 
   const { membership, member, plan } = await findMembershipWithRelations(
     gymId,
@@ -297,8 +308,41 @@ export const updateMembership = async (
   input: UpdateMembershipInput,
 ): Promise<MembershipResult> => {
   validateObjectId(gymId, "Invalid gym ID");
-
   validateObjectId(membershipId, "Invalid membership ID");
+
+  await expireMembershipsForGym(gymId);
+
+  const existingMembership = await Membership.findOne({
+    _id: membershipId,
+    gymId,
+  });
+
+  if (!existingMembership) {
+    throw new Error("Membership not found");
+  }
+
+  if (input.status === MembershipStatus.ACTIVE) {
+    const today = getStartOfUtcDay();
+
+    if (existingMembership.endDate < today) {
+      throw new Error(
+        "An expired membership cannot be reactivated. Create a new membership instead.",
+      );
+    }
+
+    const overlappingMembership = await Membership.findOne({
+      _id: { $ne: existingMembership._id },
+      gymId,
+      memberId: existingMembership.memberId,
+      status: MembershipStatus.ACTIVE,
+      startDate: { $lte: existingMembership.endDate },
+      endDate: { $gte: existingMembership.startDate },
+    });
+
+    if (overlappingMembership) {
+      throw new Error("This membership overlaps another active membership");
+    }
+  }
 
   const updateData = {
     ...(input.paymentStatus !== undefined
@@ -306,30 +350,16 @@ export const updateMembership = async (
           paymentStatus: input.paymentStatus as MembershipPaymentStatus,
         }
       : {}),
-
     ...(input.status !== undefined
-      ? {
-          status: input.status as MembershipStatus,
-        }
+      ? { status: input.status as MembershipStatus }
       : {}),
-
-    ...(input.notes !== undefined
-      ? {
-          notes: input.notes || undefined,
-        }
-      : {}),
+    ...(input.notes !== undefined ? { notes: input.notes || undefined } : {}),
   };
 
   const membership = await Membership.findOneAndUpdate(
-    {
-      _id: membershipId,
-      gymId,
-    },
+    { _id: membershipId, gymId },
     updateData,
-    {
-      new: true,
-      runValidators: true,
-    },
+    { new: true, runValidators: true },
   );
 
   if (!membership) {
