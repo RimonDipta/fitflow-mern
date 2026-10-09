@@ -50,6 +50,12 @@ const navigationItems: NavigationItem[] = [
     roles: ["SUPER_ADMIN", "GYM_ADMIN", "STAFF"],
   },
   {
+    label: "Memberships",
+    path: "/memberships",
+    icon: ClipboardList,
+    roles: ["SUPER_ADMIN", "GYM_ADMIN", "STAFF"],
+  },
+  {
     label: "Trainers",
     path: "/trainers",
     icon: UserRoundCog,
@@ -132,7 +138,6 @@ const AppSidebar = () => {
               }
             >
               <Icon size={18} strokeWidth={1.8} />
-
               <span>{item.label}</span>
             </NavLink>
           );
