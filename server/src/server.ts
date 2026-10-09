@@ -7,6 +7,8 @@ import morgan from "morgan";
 
 import { connectDatabase } from "./config/database.js";
 
+import { startMembershipExpiryJob } from "./jobs/membershipExpiry.job.js";
+
 import authRoutes from "./routes/auth.routes.js";
 import gymRoutes from "./routes/gym.routes.js";
 import memberRoutes from "./routes/member.routes.js";
@@ -76,6 +78,9 @@ app.use((_req, res) => {
 const startServer = async (): Promise<void> => {
   try {
     await connectDatabase();
+
+    // Start scheduled maintenance only after MongoDB connects.
+    startMembershipExpiryJob();
 
     app.listen(PORT, () => {
       console.log(`FitFlow API running on http://localhost:${PORT}`);
