@@ -20,6 +20,22 @@ interface LogoutResponse {
   message: string;
 }
 
+interface CurrentUserResponse {
+  success: boolean;
+  data: {
+    user: User;
+  };
+}
+
+/**
+ * Share a single refresh request between simultaneous callers.
+ *
+ * This prevents React StrictMode from sending concurrent
+ * refresh requests during development and avoids racing
+ * refresh-token rotation.
+ */
+let refreshSessionRequest: Promise<AuthResponse["data"]> | null = null;
+
 export const registerUser = async (
   credentials: RegisterCredentials,
 ): Promise<User> => {
@@ -39,22 +55,22 @@ export const loginUser = async (
   return response.data.data;
 };
 
-export const refreshSession = async (): Promise<AuthResponse["data"]> => {
-  const response = await api.post<AuthResponse>("/auth/refresh");
+export const refreshSession = (): Promise<AuthResponse["data"]> => {
+  if (!refreshSessionRequest) {
+    refreshSessionRequest = api
+      .post<AuthResponse>("/auth/refresh")
+      .then((response) => response.data.data)
+      .finally(() => {
+        refreshSessionRequest = null;
+      });
+  }
 
-  return response.data.data;
+  return refreshSessionRequest;
 };
 
 export const logoutUser = async (): Promise<void> => {
   await api.post<LogoutResponse>("/auth/logout");
 };
-
-interface CurrentUserResponse {
-  success: boolean;
-  data: {
-    user: User;
-  };
-}
 
 export const getCurrentUser = async (): Promise<User> => {
   const response = await api.get<CurrentUserResponse>("/users/me");
