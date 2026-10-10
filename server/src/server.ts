@@ -9,6 +9,7 @@ import { connectDatabase } from "./config/database.js";
 
 import { startMembershipExpiryJob } from "./jobs/membershipExpiry.job.js";
 
+import attendanceRoutes from "./routes/attendance.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import gymRoutes from "./routes/gym.routes.js";
@@ -68,6 +69,8 @@ app.use("/api/v1/members", memberRoutes);
 app.use("/api/v1/membership-plans", membershipPlanRoutes);
 
 app.use("/api/v1/memberships", membershipRoutes);
+
+app.use("/api/v1/attendance", attendanceRoutes);
 
 app.use("/api/v1/dashboard", dashboardRoutes);
 
