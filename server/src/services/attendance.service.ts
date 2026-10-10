@@ -27,6 +27,12 @@ interface AttendanceListResult {
   checkedOutCount: number;
 }
 
+interface AttendanceMember {
+  _id: Types.ObjectId;
+  name: string;
+  memberCode: string;
+}
+
 const validateObjectId = (value: string, message: string): void => {
   if (!Types.ObjectId.isValid(value)) {
     throw new Error(message);
@@ -48,11 +54,7 @@ const toAttendanceResult = (
     checkedInBy: Types.ObjectId;
     checkedOutBy?: Types.ObjectId;
   },
-  member: {
-    _id: Types.ObjectId;
-    name: string;
-    memberCode: string;
-  },
+  member: AttendanceMember,
 ): AttendanceResult => {
   const endTime = attendance.checkOutAt
     ? attendance.checkOutAt.getTime()
@@ -139,7 +141,6 @@ export const checkInMember = async (
 
     return toAttendanceResult(attendance, member);
   } catch (error) {
-    // The unique partial index protects against concurrent check-ins.
     if (
       typeof error === "object" &&
       error !== null &&
@@ -162,14 +163,18 @@ export const checkOutMember = async (
   validateObjectId(attendanceId, "Invalid attendance ID");
   validateObjectId(userId, "Invalid user ID");
 
+  // Find the record within this gym before checking its session state.
   const attendance = await Attendance.findOne({
     _id: attendanceId,
     gymId,
-    checkOutAt: { $exists: false },
   });
 
   if (!attendance) {
-    throw new Error("Open attendance session not found");
+    throw new Error("Attendance session not found");
+  }
+
+  if (attendance.checkOutAt != null) {
+    throw new Error("This attendance session has already been checked out");
   }
 
   const checkOutAt = new Date();
@@ -178,8 +183,7 @@ export const checkOutMember = async (
     throw new Error("Check-out time cannot precede check-in time");
   }
 
-  // Conditional update prevents two requests from checking out
-  // the same session at the same time.
+  // Only one concurrent request can successfully close this session.
   const updatedAttendance = await Attendance.findOneAndUpdate(
     {
       _id: attendanceId,
@@ -205,7 +209,9 @@ export const checkOutMember = async (
   const member = await Member.findOne({
     _id: updatedAttendance.memberId,
     gymId,
-  }).select("_id name memberCode");
+  })
+    .select("_id name memberCode")
+    .lean();
 
   if (!member) {
     throw new Error("Attendance member could not be found");
@@ -248,6 +254,7 @@ export const listAttendance = async (
 
   if (search?.trim()) {
     const escapedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     const matchingMembers = await Member.find({
       gymId,
       $or: [
@@ -256,7 +263,6 @@ export const listAttendance = async (
       ],
     })
       .select("_id")
-      .limit(200)
       .lean();
 
     const matchingMemberIds = matchingMembers.map((member) => member._id);
@@ -278,15 +284,39 @@ export const listAttendance = async (
     .limit(100)
     .lean();
 
+  if (attendanceRecords.length === 0) {
+    return {
+      records: [],
+      total: 0,
+      checkedInCount: 0,
+      checkedOutCount: 0,
+    };
+  }
+
+  const memberIds = [
+    ...new Map(
+      attendanceRecords.map((attendance) => [
+        attendance.memberId.toString(),
+        attendance.memberId,
+      ]),
+    ).values(),
+  ];
+
+  const members = await Member.find({
+    _id: { $in: memberIds },
+    gymId,
+  })
+    .select("_id name memberCode")
+    .lean();
+
+  const membersById = new Map(
+    members.map((member) => [member._id.toString(), member]),
+  );
+
   const records: AttendanceResult[] = [];
 
   for (const attendance of attendanceRecords) {
-    const member = await Member.findOne({
-      _id: attendance.memberId,
-      gymId,
-    })
-      .select("_id name memberCode")
-      .lean();
+    const member = membersById.get(attendance.memberId.toString());
 
     if (!member) {
       continue;
