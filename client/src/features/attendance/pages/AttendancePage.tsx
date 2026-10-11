@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import {
   Activity,
@@ -73,27 +73,38 @@ const AttendancePage = () => {
   const [notice, setNotice] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
-  const loadAttendance = useCallback(async () => {
-    setError("");
-
-    try {
-      const result = await getAttendance(
-        dateFilter || undefined,
-        historySearch.trim() || undefined,
-      );
-
-      setRecords(result.records);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [dateFilter, historySearch]);
-
   useEffect(() => {
-    void loadAttendance();
-  }, [loadAttendance, reloadKey]);
+    let cancelled = false;
+
+    const fetchAttendance = async () => {
+      try {
+        const result = await getAttendance(
+          dateFilter || undefined,
+          historySearch.trim() || undefined,
+        );
+
+        if (!cancelled) {
+          setRecords(result.records);
+          setError("");
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(getErrorMessage(requestError));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
+      }
+    };
+
+    void Promise.resolve().then(fetchAttendance);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateFilter, historySearch, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;

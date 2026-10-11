@@ -65,7 +65,7 @@ const navigationItems: NavigationItem[] = [
     label: "Attendance",
     path: "/attendance",
     icon: ClipboardList,
-    roles: ["SUPER_ADMIN", "GYM_ADMIN", "TRAINER", "STAFF", "MEMBER"],
+    roles: ["GYM_ADMIN", "STAFF", "TRAINER"],
   },
   {
     label: "Workouts",
