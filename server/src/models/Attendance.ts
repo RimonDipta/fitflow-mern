@@ -5,6 +5,7 @@ export interface IAttendance extends Document {
   memberId: Types.ObjectId;
   checkInAt: Date;
   checkOutAt?: Date;
+  isOpen: boolean;
   checkedInBy: Types.ObjectId;
   checkedOutBy?: Types.ObjectId;
   createdAt: Date;
@@ -30,6 +31,11 @@ const attendanceSchema = new Schema<IAttendance>(
     },
     checkOutAt: {
       type: Date,
+    },
+    isOpen: {
+      type: Boolean,
+      required: true,
+      default: true,
     },
     checkedInBy: {
       type: Schema.Types.ObjectId,
@@ -58,7 +64,6 @@ attendanceSchema.index({
 });
 
 // A member can have only one open attendance session per gym.
-// This also protects against simultaneous check-in requests.
 attendanceSchema.index(
   {
     gymId: 1,
@@ -67,7 +72,7 @@ attendanceSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      checkOutAt: { $exists: false },
+      isOpen: true,
     },
   },
 );

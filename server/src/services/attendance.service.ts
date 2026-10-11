@@ -124,7 +124,7 @@ export const checkInMember = async (
   const existingSession = await Attendance.findOne({
     gymId,
     memberId: member._id,
-    checkOutAt: { $exists: false },
+    isOpen: true,
   });
 
   if (existingSession) {
@@ -137,6 +137,7 @@ export const checkInMember = async (
       memberId: member._id,
       checkedInBy: userId,
       checkInAt: now,
+      isOpen: true,
     });
 
     return toAttendanceResult(attendance, member);
@@ -163,7 +164,6 @@ export const checkOutMember = async (
   validateObjectId(attendanceId, "Invalid attendance ID");
   validateObjectId(userId, "Invalid user ID");
 
-  // Find the record within this gym before checking its session state.
   const attendance = await Attendance.findOne({
     _id: attendanceId,
     gymId,
@@ -173,7 +173,7 @@ export const checkOutMember = async (
     throw new Error("Attendance session not found");
   }
 
-  if (attendance.checkOutAt != null) {
+  if (!attendance.isOpen || attendance.checkOutAt != null) {
     throw new Error("This attendance session has already been checked out");
   }
 
@@ -183,17 +183,19 @@ export const checkOutMember = async (
     throw new Error("Check-out time cannot precede check-in time");
   }
 
-  // Only one concurrent request can successfully close this session.
+  // Atomically close the session so only one concurrent checkout succeeds.
   const updatedAttendance = await Attendance.findOneAndUpdate(
     {
       _id: attendanceId,
       gymId,
+      isOpen: true,
       checkOutAt: { $exists: false },
     },
     {
       $set: {
         checkOutAt,
         checkedOutBy: userId,
+        isOpen: false,
       },
     },
     {
